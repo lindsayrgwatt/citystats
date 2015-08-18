@@ -1,3 +1,5 @@
+from secrets import *
+
 """
 Django settings for seattlestats project.
 
@@ -31,6 +33,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
 )
 
 MIDDLEWARE_CLASSES = (

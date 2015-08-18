@@ -1,3 +1,3 @@
 *.py[cod]
-
+.DS_Store
 *secrets.py

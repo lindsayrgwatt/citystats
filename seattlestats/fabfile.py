@@ -27,6 +27,7 @@ env.project_name = 'citystats'
 env.project_dir = os.path.join(env.http_dir, env.project_name)
 env.project_code_dir = os.path.join(env.project_dir, 'seattlestats')
 env.virtualenv_dir = os.path.join(env.project_dir, 'venv')
+env.deploy_dir = os.path.join(env.project_code_dir, 'deploy')
 env.remote_secrets_path = env.http_dir + env.project_name + '/seattlestats/seattlestats/settings/'
 env.prod_settings = "--settings=seattlestats.settings.prod"
 
@@ -129,6 +130,22 @@ def run_prod_migrations():
     with cd(env.project_code_dir):
         run("python manage.py migrate %(prod_settings)s" % env))
 
+def install_gunicorn():
+    with prefix('source %(virtualenv_dir)s/bin/activate' % env):
+        run("pip install gunicorn")
+
+def install_supervisor():
+    with prefix('source %(virtualenv_dir)s/bin/activate' % env):
+        run("pip install supervisor --pre")
+        run("sudo mv -f %(deploy_dir)s/supervisorstart.conf /etc/init/" % env)
+
+def launch_supervisor():
+    run("sudo start supervisord")
+
+def configure_nginx():
+    run("sudo cp -f %(deploy_dir)s/nginx.conf /etc/nginx/" % env)
+    sudo("service nginx restart")
+
 def first_deploy_prep_a():
     update_server()
     install_required_software()
@@ -155,4 +172,6 @@ def first_deploy():
     install_gunicorn()
     install_supervisor()
     launch_supervisor()
+
+    configure_nginx()
 

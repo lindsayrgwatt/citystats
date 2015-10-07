@@ -1,6 +1,6 @@
 import os
 
-from fabric.api import local, env
+from fabric.api import local, env, run, cd, put, sudo, prefix
 from fabric.contrib import django
 from seattlestats.settings.secrets import *
 
@@ -14,7 +14,7 @@ env.local_postgres_user = settings.DATABASES['default']['USER']
 env.local_postgres_password = LOCAL_DATABASE_PASSWORD
 env.local_secrets_path = env.local_base_dir + '/settings/secrets.py'
 
-env.hosts = ['ec2-52-26-247-31.us-west-2.compute.amazonaws.com']
+env.hosts = ['ec2-52-10-62-50.us-west-2.compute.amazonaws.com']
 env.user = 'ubuntu'
 env.sudo_user = env.user
 env.prod_postgres_database = settings.DATABASES['default']['NAME']
@@ -28,7 +28,7 @@ env.project_dir = os.path.join(env.http_dir, env.project_name)
 env.project_code_dir = os.path.join(env.project_dir, 'seattlestats')
 env.virtualenv_dir = os.path.join(env.project_dir, 'venv')
 env.deploy_dir = os.path.join(env.project_code_dir, 'deploy')
-env.remote_secrets_path = env.http_dir + env.project_name + '/seattlestats/seattlestats/settings/'
+env.remote_secrets_path = env.http_dir + '/' + env.project_name + '/seattlestats/seattlestats/settings/'
 env.prod_settings = "--settings=seattlestats.settings.prod"
 
 ### Local
@@ -64,6 +64,8 @@ def update_server():
     run("sudo apt-get -y -q upgrade")
     # All the options in the following command are to avoid getting stuck on a grub update screen
     # http://askubuntu.com/questions/146921/how-do-i-apt-get-y-dist-upgrade-without-a-grub-config-prompt
+    # If you still get it, choose the package maintainer version:
+    # http://serverfault.com/questions/662624/how-to-avoid-grub-errors-after-runing-apt-get-upgrade-ubunut
     run('sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade')
 
 def install_required_software():
@@ -82,8 +84,9 @@ def install_base_python_packages():
     run("sudo pip install virtualenv")
 
 def install_project_python_packages():
-    with cd(env.project_code_dir):
-        run("pip install -r requirements.txt")
+    with prefix('source %(virtualenv_dir)s/bin/activate' % env):
+        with cd(env.project_code_dir):
+            run("pip install -r requirements.txt")
 
 def start_nginx():
     sudo("service nginx start")
@@ -124,11 +127,13 @@ def set_up_database():
     run("sudo psql -U postgres -c \"GRANT ALL PRIVILEGES ON DATABASE %(prod_postgres_database)s TO %(prod_postgres_user)s;\"" % env)
 
 def upload_secrets():
-    put(env.local_secrets_path, env.remote_secrets_path)
+    put(env.local_secrets_path, env.http_dir)
+    run('sudo cp %(http_dir)s/secrets.py %(remote_secrets_path)s' % env)
 
 def run_prod_migrations():
-    with cd(env.project_code_dir):
-        run("python manage.py migrate %(prod_settings)s" % env))
+    with prefix('source %(virtualenv_dir)s/bin/activate' % env):
+        with cd(env.project_code_dir):
+            run("python manage.py migrate %(prod_settings)s" % env)
 
 def install_gunicorn():
     with prefix('source %(virtualenv_dir)s/bin/activate' % env):
@@ -158,20 +163,23 @@ def first_deploy_prep_b():
 
 def first_deploy():
     run("sudo git clone %(github_url)s" % env) # First install of code
+    run("sudo chmod -R 777 %(project_dir)s" % env) # Set permissions
 
     upload_secrets()
 
     # Set up virtualenv and change write permissions
     run("sudo virtualenv %(virtualenv_dir)s" % env)
-    run("sudo chmod -R 754 %(virtualenv_dir)s" % env)
+    run("sudo chmod -R 777 %(virtualenv_dir)s" % env)
 
     install_project_python_packages()
+
+    set_up_database()
 
     run_prod_migrations()
 
     install_gunicorn()
     install_supervisor()
-    launch_supervisor()
+    launch_supervisor() # FAILS HERE
 
     configure_nginx()
 

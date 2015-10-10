@@ -142,7 +142,7 @@ def install_gunicorn():
 def install_supervisor():
     with prefix('source %(virtualenv_dir)s/bin/activate' % env):
         run("pip install supervisor --pre")
-        run("sudo mv -f %(deploy_dir)s/supervisorstart.conf /etc/init/" % env)
+        run("sudo cp -f %(deploy_dir)s/supervisorstart.conf /etc/init/" % env)
 
 def launch_supervisor():
     run("sudo start supervisord")
@@ -160,6 +160,11 @@ def first_deploy_prep_a():
 
 def first_deploy_prep_b():
     restart_postgres()
+
+def remote_git_pull():
+    with cd(env.project_code_dir):
+        run("git stash")
+        run("git pull")
 
 def first_deploy():
     run("sudo git clone %(github_url)s" % env) # First install of code

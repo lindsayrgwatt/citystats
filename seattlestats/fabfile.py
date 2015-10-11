@@ -14,7 +14,7 @@ env.local_postgres_user = settings.DATABASES['default']['USER']
 env.local_postgres_password = LOCAL_DATABASE_PASSWORD
 env.local_secrets_path = env.local_base_dir + '/settings/secrets.py'
 
-env.hosts = ['ec2-52-10-62-50.us-west-2.compute.amazonaws.com']
+env.hosts = ['ec2-52-88-130-134.us-west-2.compute.amazonaws.com']
 env.user = 'ubuntu'
 env.sudo_user = env.user
 env.prod_postgres_database = settings.DATABASES['default']['NAME']
@@ -96,6 +96,7 @@ def manually_configure_postgres():
     print "1. Give the postgres user in your database a password"
     print "2. Update the authentication method of postgres so that you can actually connect"
     print "Some details here: http://suite.opengeo.org/4.1/dataadmin/pgGettingStarted/firstconnect.html"
+    print "\n"
     print "Part 1."
     print "1. ssh into your server: ssh %(user)s@%(hosts)s" % env
     print "2. open psql as the postgres user. No password is required as none exists yet: sudo -u postgres psql postgres"
@@ -144,10 +145,13 @@ def install_supervisor():
         run("pip install supervisor --pre")
         run("sudo cp -f %(deploy_dir)s/supervisorstart.conf /etc/init/" % env)
 
-def launch_supervisor():
-    run("sudo start supervisord")
+def reboot_remote_host():
+    run("sudo reboot")
 
 def configure_nginx():
+    #run("sudo rm /etc/nginx/sites-enabled/default")
+    #run("sudo rm /etc/nginx/sites-available/default")
+
     run("sudo cp -f %(deploy_dir)s/nginx.conf /etc/nginx/" % env)
     sudo("service nginx restart")
 
@@ -161,20 +165,27 @@ def first_deploy_prep_a():
 def first_deploy_prep_b():
     restart_postgres()
 
+def clone_project():
+    run("sudo git clone %(github_url)s" % env) # First install of code
+    run("sudo chmod -R 777 %(project_dir)s" % env) # Set permissions
+
 def remote_git_pull():
     with cd(env.project_code_dir):
         run("git stash")
         run("git pull")
 
-def first_deploy():
-    run("sudo git clone %(github_url)s" % env) # First install of code
-    run("sudo chmod -R 777 %(project_dir)s" % env) # Set permissions
-
-    upload_secrets()
-
+def create_virtualenv():
     # Set up virtualenv and change write permissions
     run("sudo virtualenv %(virtualenv_dir)s" % env)
     run("sudo chmod -R 777 %(virtualenv_dir)s" % env)
+
+
+def first_deploy():
+    clone_project()
+
+    upload_secrets()
+
+    create_virtualenv()
 
     install_project_python_packages()
 
@@ -184,7 +195,8 @@ def first_deploy():
 
     install_gunicorn()
     install_supervisor()
-    launch_supervisor() # FAILS HERE
+    
+    reboot_remote_host() # You've installed superivsor to start on reboot. This is a way to check
 
     configure_nginx()
 

@@ -136,9 +136,17 @@ def run_prod_migrations():
         with cd(env.project_code_dir):
             run("python manage.py migrate %(prod_settings)s" % env)
 
+def create_superuser():
+    with prefix('source %(virtualenv_dir)s/bin/activate' % env):
+        with cd(env.project_code_dir):
+            run("python manage.py createsuperuser %(prod_settings)s" % env)
+
 def install_gunicorn():
     with prefix('source %(virtualenv_dir)s/bin/activate' % env):
         run("pip install gunicorn")
+
+        # Need to set executable bit on /gunicorn_start
+        run("sudo chmod u+x /home/ubuntu/citystats/seattlestats/deploy/gunicorn_start")
 
 def install_supervisor():
     with prefix('source %(virtualenv_dir)s/bin/activate' % env):
@@ -149,8 +157,8 @@ def reboot_remote_host():
     run("sudo reboot")
 
 def configure_nginx():
-    #run("sudo rm /etc/nginx/sites-enabled/default")
-    #run("sudo rm /etc/nginx/sites-available/default")
+    run("sudo rm /etc/nginx/sites-enabled/default")
+    run("sudo rm /etc/nginx/sites-available/default")
 
     run("sudo cp -f %(deploy_dir)s/nginx.conf /etc/nginx/" % env)
     sudo("service nginx restart")
@@ -179,6 +187,11 @@ def create_virtualenv():
     run("sudo virtualenv %(virtualenv_dir)s" % env)
     run("sudo chmod -R 777 %(virtualenv_dir)s" % env)
 
+def collect_static_files():
+    with prefix('source %(virtualenv_dir)s/bin/activate' % env):
+        with cd(env.project_code_dir):
+            run("python manage.py collectstatic %(prod_settings)s" % env)
+
 
 def first_deploy():
     clone_project()
@@ -193,10 +206,13 @@ def first_deploy():
 
     run_prod_migrations()
 
+    create_superuser()
+
     install_gunicorn()
     install_supervisor()
-    
-    reboot_remote_host() # You've installed superivsor to start on reboot. This is a way to check
 
     configure_nginx()
+    
+    reboot_remote_host() # You've installed superivsor to start on reboot. This is a way to check it works
+
 

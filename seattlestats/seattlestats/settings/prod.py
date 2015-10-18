@@ -1,7 +1,7 @@
 from base import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 DATABASES = {
     'default': {
@@ -14,3 +14,4 @@ DATABASES = {
     }
 }
 
+STATIC_ROOT = '/home/ubuntu/citystats/seattlestats/static/'

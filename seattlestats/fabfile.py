@@ -163,6 +163,10 @@ def configure_nginx():
     run("sudo cp -f %(deploy_dir)s/nginx.conf /etc/nginx/" % env)
     sudo("service nginx restart")
 
+# DOES NOT WORK
+def restart_nginx():
+    sudo("service nginx restart")
+
 def first_deploy_prep_a():
     update_server()
     install_required_software()

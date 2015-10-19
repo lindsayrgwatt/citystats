@@ -146,7 +146,7 @@ def install_gunicorn():
         run("pip install gunicorn")
 
         # Need to set executable bit on /gunicorn_start
-        run("sudo chmod u+x /home/ubuntu/citystats/seattlestats/deploy/gunicorn_start")
+        run("chmod +x /home/ubuntu/citystats/seattlestats/deploy/gunicorn_start")
 
 def install_supervisor():
     with prefix('source %(virtualenv_dir)s/bin/activate' % env):

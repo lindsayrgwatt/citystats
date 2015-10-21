@@ -157,11 +157,11 @@ def reboot_remote_host():
     run("sudo reboot")
 
 def configure_nginx():
-    run("sudo rm /etc/nginx/sites-enabled/default")
-    run("sudo rm /etc/nginx/sites-available/default")
+    #run("sudo rm /etc/nginx/sites-enabled/default")
+    #run("sudo rm /etc/nginx/sites-available/default")
 
     run("sudo cp -f %(deploy_dir)s/nginx.conf /etc/nginx/" % env)
-    sudo("service nginx restart")
+    sudo("sudo service nginx restart")
 
 # DOES NOT WORK
 def restart_nginx():

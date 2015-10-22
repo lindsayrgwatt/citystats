@@ -148,6 +148,11 @@ def install_gunicorn():
         # Need to set executable bit on /gunicorn_start
         run("chmod +x /home/ubuntu/citystats/seattlestats/deploy/gunicorn_start")
 
+        # Create directory for socket. Note that it is /var/sockets as
+        # /tmp and /var cannot be accessed for shared processes
+        run("sudo mkdir /var/sockets")
+        run("sudo chmod 777 /var/sockets")
+
 def install_supervisor():
     with prefix('source %(virtualenv_dir)s/bin/activate' % env):
         run("pip install supervisor --pre")
@@ -157,13 +162,12 @@ def reboot_remote_host():
     run("sudo reboot")
 
 def configure_nginx():
-    #run("sudo rm /etc/nginx/sites-enabled/default")
-    #run("sudo rm /etc/nginx/sites-available/default")
+    run("sudo rm /etc/nginx/sites-enabled/default")
+    run("sudo rm /etc/nginx/sites-available/default")
 
     run("sudo cp -f %(deploy_dir)s/nginx.conf /etc/nginx/" % env)
     sudo("sudo service nginx restart")
 
-# DOES NOT WORK
 def restart_nginx():
     sudo("service nginx restart")
 
